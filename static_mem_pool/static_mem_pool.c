@@ -205,6 +205,61 @@ smp_free_status_e smp_free(void * ptr){
 }
 
 /***
+ * @brief Static memory realloc
+ * @details Resizes the allocated memory chunk. If the new_size is 0 or the ptr is not valid, returns SMP_NULL
+ *          and does not free the ptr chunk. Otherwise resizes the ptr chunk if possible or frees the old one and
+ *          mallocs the new one and copies the data from the old address to the new one
+ * @param[in] ptr Pointer to the piece of data in the chunk to be reallocated
+ * @return Returns SMP_NULL if failed and void * if succeeded
+*/
+void * smp_realloc(void * ptr, uint16_t new_size){
+    if ((SMP_END_GLOBAL <= SMP_CAST_U8(ptr)) || (SMP_BEGIN_GLOBAL > SMP_CAST_U8(ptr)) || (!new_size)){
+        return SMP_NULL;
+    }
+    smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
+    smp_chunk_header_t * final_chunk = active_chunk;
+    smp_chunk_header_t * next_chunk;
+    smp_chunk_header_t * prev_chunk;
+    while(active_chunk->next_chunk != SMP_END_LOCAL){
+        if (active_chunk->size == 0){
+            if ((SMP_CAST_U8(ptr) < SMP_GLOBAL_PTR(SMP_CHUNK_SIZE)) ||
+                (SMP_CAST_U8(ptr) < (SMP_GLOBAL_PTR(active_chunk->next_chunk)))){
+                return SMP_NULL;
+            }
+            active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
+            continue;
+        }
+        next_chunk = SMP_GLOBAL_PTR(active_chunk->next_chunk);
+        if ((SMP_CAST_U8(ptr) >= SMP_CAST_U8(active_chunk)) && (SMP_CAST_U8(ptr) < SMP_CAST_U8(next_chunk))){
+            if (((SMP_CAST_U8(ptr) < (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE))) ||
+                ((SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size)))){
+                return SMP_NULL;
+            }
+            final_chunk = active_chunk;
+            break;
+        }
+        active_chunk = next_chunk;
+    }
+    if ((SMP_CAST_U8(ptr) < (SMP_CAST_U8(final_chunk) + SMP_CHUNK_SIZE)) ||
+        (final_chunk->size == 0) ||
+        (SMP_CAST_U8(ptr) >= (SMP_CAST_U8(final_chunk) + SMP_CHUNK_SIZE + final_chunk->size))){
+        return SMP_NULL;
+    }
+    if ((SMP_GLOBAL_PTR(final_chunk->next_chunk) - SMP_CAST_U8(final_chunk)) >= new_size){
+        final_chunk->size = new_size;
+        return ptr;
+    }
+    else{
+        void * new_ptr = smp_malloc(new_size);
+        if (new_ptr == SMP_NULL){
+            return SMP_NULL;
+        }
+        memcpy(new_ptr, SMP_CAST_U8(final_chunk) + SMP_CHUNK_SIZE, final_chunk->size);
+        smp_free(ptr);
+        return new_ptr;
+    }
+}
+
  * @brief Count filled bytes (including headers) in static memory pool
  * @return Returns a number of filled bytes in the memory pool
 */
@@ -219,6 +274,7 @@ uint16_t smp_count_filled(void){
 uint16_t smp_count_free(void){
     return STATIC_MEM_POOL_SIZE - smp_count_filled_bytes();
 }
+
 
 
 
