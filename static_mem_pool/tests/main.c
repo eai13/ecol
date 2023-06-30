@@ -100,7 +100,15 @@ int main(){
     printf("filled bytes : %d\r\n", smp_count_filled());
     printf("free bytes : %d\r\n", smp_count_free());
 
-    
+    printf("Free status 0x%X\r\n", smp_free(ptr_4));
+    print_map();
+    printf("filled bytes : %d\r\n", smp_count_filled());
+    printf("free bytes : %d\r\n", smp_count_free());
+    ptr_4 = smp_malloc(0);
+    printf("%d\r\n", ptr_4);
+    print_map();
+    printf("filled bytes : %d\r\n", smp_count_filled());
+    printf("free bytes : %d\r\n", smp_count_free());
     // printf("%d\r\n", get_local(smp_malloc(8)));
     // print_map();
     return 0;
