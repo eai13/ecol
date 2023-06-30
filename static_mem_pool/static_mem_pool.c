@@ -260,6 +260,7 @@ void * smp_realloc(void * ptr, uint16_t new_size){
     }
 }
 
+/***
  * @brief Count filled bytes (including headers) in static memory pool
  * @return Returns a number of filled bytes in the memory pool
 */
