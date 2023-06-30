@@ -107,6 +107,9 @@ void smp_initialize(void){
  * @return Returns a void pointer to the start of the allocated memory
 */
 void * smp_malloc(uint16_t size){
+    if(size == 0) {
+        return SMP_NULL;
+    }
     smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
     if ((active_chunk->size == 0) && ((SMP_MIDCHUNK_SIZE(active_chunk, SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk)))) >= size)){
         return smp_chunk_add(SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->prev_chunk)), SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk)), smp, size);
