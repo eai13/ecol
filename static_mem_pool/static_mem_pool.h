@@ -22,6 +22,9 @@ void *              smp_malloc(uint16_t size);
 void *              smp_realloc(void * ptr, uint16_t new_size);
 smp_free_status_e   smp_free(void * ptr);
 
+uint16_t            smp_count_filled(void);
+uint16_t            smp_count_free(void);
+
 // Utility functions, may delete
 /* Prints global pointer in local memory pool */
 /**/ uint32_t get_local(void * ptr);

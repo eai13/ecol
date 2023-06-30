@@ -75,6 +75,23 @@ void * smp_chunk_add(smp_chunk_header_t * prev_chunk, smp_chunk_header_t * next_
 }
 
 /***
+ * @brief Utility local function, used to count filled bytes (including headers) in static memory pool
+ * @return Returns a number of filled bytes in the memory pool
+*/
+static inline
+uint16_t smp_count_filled_bytes(void){
+    uint16_t filled_bytes = 0;
+    smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
+    do{
+        if(active_chunk->size != 0){
+            filled_bytes += SMP_CHUNK_SIZE + active_chunk->size;
+        }
+        active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
+    } while(active_chunk != SMP_CAST_CHUNK_H(SMP_END_GLOBAL));
+    return filled_bytes;
+}
+
+/***
  * @brief Static memory pool initialization function, call it before start working with static allocation
 */
 void smp_initialize(void){
@@ -133,7 +150,7 @@ smp_free_status_e smp_free(void * ptr){
             active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
             continue;
         }
-        next_chunk = SMP_GLOBAL_PTR(active_chunk->next_chunk);
+        next_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
         if ((SMP_CAST_U8(ptr) >= SMP_CAST_U8(active_chunk)) && (SMP_CAST_U8(ptr) < SMP_CAST_U8(next_chunk))){
             if ((SMP_CAST_U8(ptr) < (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE))){
                 return SMP_FREE_IS_RESOURCE_PTR;
@@ -141,7 +158,7 @@ smp_free_status_e smp_free(void * ptr){
             if ((SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size))){
                 return SMP_FREE_ALREADY_FREED;
             }
-            if (active_chunk == SMP_BEGIN_GLOBAL){
+            if (active_chunk == SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)){
                 memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
                 active_chunk->size = 0;
                 return SMP_FREE_OK;
@@ -168,7 +185,7 @@ smp_free_status_e smp_free(void * ptr){
     if (SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size)){
         return SMP_FREE_ALREADY_FREED;
     }
-    if (active_chunk == SMP_BEGIN_GLOBAL){
+    if (active_chunk == SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)){
         memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
         active_chunk->size = 0;
         return SMP_FREE_OK;
@@ -240,8 +257,20 @@ void * smp_realloc(void * ptr, uint16_t new_size){
     }
 }
 
+ * @brief Count filled bytes (including headers) in static memory pool
+ * @return Returns a number of filled bytes in the memory pool
+*/
+uint16_t smp_count_filled(void){
+    return smp_count_filled_bytes();
+}
 
-
+/***
+ * @brief Count free bytes (including headers) in static memory pool
+ * @return Returns a number of free bytes in the memory pool
+*/
+uint16_t smp_count_free(void){
+    return STATIC_MEM_POOL_SIZE - smp_count_filled_bytes();
+}
 
 
 
