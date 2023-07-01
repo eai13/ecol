@@ -5,111 +5,25 @@
 int main(){
     smp_initialize();
     print_map();
-    printf("void * size : %d\r\n", sizeof(void *));
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    uint8_t * ptr_1 = smp_malloc(8);
-    memset(ptr_1, 0xAA, 8);
-    printf("%d\r\n", get_local(ptr_1));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    uint8_t * ptr_2 = smp_malloc(8);
-    memset(ptr_2, 0xBB, 8);
-    printf("%d\r\n", get_local(ptr_2));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    uint8_t * ptr_3 = smp_malloc(8);
-    memset(ptr_3, 0xCC, 8);
-    printf("%d\r\n", get_local(ptr_3));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    uint8_t * ptr_4 = smp_malloc(8);
-    memset(ptr_4, 0xDD, 8);
-    printf("%d\r\n", get_local(ptr_4));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-
-    printf("Free status 0x%X\r\n", smp_free(ptr_2));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-
-    ptr_2 = smp_malloc(8);
-    memset(ptr_2, 0xEE, 8);
-    printf("%d\r\n", get_local(ptr_2));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-
-    printf("Free status 0x%X\r\n", smp_free(ptr_1));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
     
-    ptr_1 = smp_malloc(8);
-    memset(ptr_1, 0xFF, 8);
-    printf("%d\r\n", get_local(ptr_1));
+    uint8_t * ptr_1 = smp_malloc(10);
+    memset(ptr_1, 0xAA, 10);
     print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-
-    printf("Free status 0x%X\r\n", smp_free(ptr_1));
+    printf("MALLOC 1 ADDR %d\r\n", ptr_1);
+    
+    uint8_t * ptr_2 = smp_malloc(5);
+    memset(ptr_2, 0xBB, 5);
     print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    printf("Free status 0x%X\r\n", smp_free(ptr_2));
+    printf("MALLOC 2 ADDR %d\r\n", ptr_2);
+    
+    uint8_t * ptr_3 = smp_malloc(5);
+    memset(ptr_3, 0xCC, 5);
     print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    printf("Free status 0x%X\r\n", smp_free(ptr_3));
+    printf("MALLOC 3 ADDR %d\r\n", ptr_3);
+    
+    uint8_t * ptr_4 = smp_realloc(ptr_1, 11);
+    memset(ptr_4 + 10, 0xDD, 1);
     print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    printf("Free status 0x%X\r\n", smp_free(ptr_4));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-
-    printf("void * size : %d\r\n", sizeof(void *));
-    ptr_1 = smp_malloc(8);
-    memset(ptr_1, 0xAA, 8);
-    printf("%d\r\n", get_local(ptr_1));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    ptr_2 = smp_malloc(8);
-    memset(ptr_2, 0xBB, 8);
-    printf("%d\r\n", get_local(ptr_2));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    ptr_3 = smp_malloc(8);
-    memset(ptr_3, 0xCC, 8);
-    printf("%d\r\n", get_local(ptr_3));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    ptr_4 = smp_malloc(8);
-    memset(ptr_4, 0xDD, 8);
-    printf("%d\r\n", get_local(ptr_4));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-
-    printf("Free status 0x%X\r\n", smp_free(ptr_4));
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    ptr_4 = smp_malloc(0);
-    printf("%d\r\n", ptr_4);
-    print_map();
-    printf("filled bytes : %d\r\n", smp_count_filled());
-    printf("free bytes : %d\r\n", smp_count_free());
-    // printf("%d\r\n", get_local(smp_malloc(8)));
-    // print_map();
+    
     return 0;
 }

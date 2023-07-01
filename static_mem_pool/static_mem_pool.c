@@ -75,6 +75,27 @@ void * smp_chunk_add(smp_chunk_header_t * prev_chunk, smp_chunk_header_t * next_
 }
 
 /***
+ * @brief Static function for finding the chunk via the pointer
+ * @param[in] ptr Some pointer
+*/
+static inline
+smp_chunk_header_t * smp_findchunk(void * ptr){
+    if ((SMP_END_GLOBAL <= SMP_CAST_U8(ptr)) || (SMP_BEGIN_GLOBAL > SMP_CAST_U8(ptr))){
+        return SMP_CAST_CHUNK_H(SMP_NULL);
+    }
+    smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
+    do{
+        if ((SMP_CAST_U8(ptr) < (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size)) &&
+            (SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE)))
+        {
+            return active_chunk;
+        }
+        active_chunk = SMP_CAST_CHUNK_H(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size);
+    }while(active_chunk != SMP_CAST_CHUNK_H(SMP_END_GLOBAL));
+    return SMP_CAST_CHUNK_H(SMP_NULL);
+}
+
+/***
  * @brief Utility local function, used to count filled bytes (including headers) in static memory pool
  * @return Returns a number of filled bytes in the memory pool
 */
@@ -136,58 +157,10 @@ void * smp_malloc(uint16_t size){
  * @return Returns the free status
 */
 smp_free_status_e smp_free(void * ptr){
-    if ((SMP_END_GLOBAL <= SMP_CAST_U8(ptr)) || (SMP_BEGIN_GLOBAL > SMP_CAST_U8(ptr))){
-        return SMP_FREE_NOT_IN_POOL;
-    }
-    smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
-    smp_chunk_header_t * next_chunk;
+    smp_chunk_header_t * active_chunk = smp_findchunk(ptr);
+    if (!active_chunk) return SMP_FREE_NOT_IN_POOL;
     smp_chunk_header_t * prev_chunk;
-    while(active_chunk->next_chunk != SMP_END_LOCAL){
-        if (active_chunk->size == 0){
-            if (SMP_CAST_U8(ptr) < SMP_GLOBAL_PTR(SMP_CHUNK_SIZE)){
-                return SMP_FREE_IS_RESOURCE_PTR;
-            }
-            if (SMP_CAST_U8(ptr) < (SMP_GLOBAL_PTR(active_chunk->next_chunk))){
-                return SMP_FREE_ALREADY_FREED;
-            }
-            active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
-            continue;
-        }
-        next_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
-        if ((SMP_CAST_U8(ptr) >= SMP_CAST_U8(active_chunk)) && (SMP_CAST_U8(ptr) < SMP_CAST_U8(next_chunk))){
-            if ((SMP_CAST_U8(ptr) < (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE))){
-                return SMP_FREE_IS_RESOURCE_PTR;
-            }
-            if ((SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size))){
-                return SMP_FREE_ALREADY_FREED;
-            }
-            if (active_chunk == SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)){
-                memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
-                active_chunk->size = 0;
-                return SMP_FREE_OK;
-            }
-            else{
-                prev_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->prev_chunk));
-                prev_chunk->next_chunk = active_chunk->next_chunk;
-                next_chunk->prev_chunk = active_chunk->prev_chunk;
-                memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
-                active_chunk->size = 0;
-                active_chunk->next_chunk = 0;
-                active_chunk->prev_chunk = 0;
-                return SMP_FREE_OK;
-            }
-        }
-        active_chunk = next_chunk;
-    }
-    if (SMP_CAST_U8(ptr) < (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE)){
-        return SMP_FREE_IS_RESOURCE_PTR;
-    }
-    if (active_chunk->size == 0){
-        return SMP_FREE_ALREADY_FREED;
-    }
-    if (SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size)){
-        return SMP_FREE_ALREADY_FREED;
-    }
+
     if (active_chunk == SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)){
         memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
         active_chunk->size = 0;
@@ -197,6 +170,10 @@ smp_free_status_e smp_free(void * ptr){
         prev_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->prev_chunk));
         memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
         prev_chunk->next_chunk = active_chunk->next_chunk;
+        if (active_chunk->next_chunk != SMP_END_LOCAL) {
+            smp_chunk_header_t * next_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
+            next_chunk->prev_chunk = active_chunk->prev_chunk;
+        }
         active_chunk->size = 0;
         active_chunk->next_chunk = 0;
         active_chunk->prev_chunk = 0;
@@ -213,40 +190,12 @@ smp_free_status_e smp_free(void * ptr){
  * @return Returns SMP_NULL if failed and void * if succeeded
 */
 void * smp_realloc(void * ptr, uint16_t new_size){
-    if ((SMP_END_GLOBAL <= SMP_CAST_U8(ptr)) || (SMP_BEGIN_GLOBAL > SMP_CAST_U8(ptr)) || (!new_size)){
-        return SMP_NULL;
-    }
-    smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
-    smp_chunk_header_t * final_chunk = active_chunk;
-    smp_chunk_header_t * next_chunk;
-    smp_chunk_header_t * prev_chunk;
-    while(active_chunk->next_chunk != SMP_END_LOCAL){
-        if (active_chunk->size == 0){
-            if ((SMP_CAST_U8(ptr) < SMP_GLOBAL_PTR(SMP_CHUNK_SIZE)) ||
-                (SMP_CAST_U8(ptr) < (SMP_GLOBAL_PTR(active_chunk->next_chunk)))){
-                return SMP_NULL;
-            }
-            active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
-            continue;
-        }
-        next_chunk = SMP_GLOBAL_PTR(active_chunk->next_chunk);
-        if ((SMP_CAST_U8(ptr) >= SMP_CAST_U8(active_chunk)) && (SMP_CAST_U8(ptr) < SMP_CAST_U8(next_chunk))){
-            if (((SMP_CAST_U8(ptr) < (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE))) ||
-                ((SMP_CAST_U8(ptr) >= (SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size)))){
-                return SMP_NULL;
-            }
-            final_chunk = active_chunk;
-            break;
-        }
-        active_chunk = next_chunk;
-    }
-    if ((SMP_CAST_U8(ptr) < (SMP_CAST_U8(final_chunk) + SMP_CHUNK_SIZE)) ||
-        (final_chunk->size == 0) ||
-        (SMP_CAST_U8(ptr) >= (SMP_CAST_U8(final_chunk) + SMP_CHUNK_SIZE + final_chunk->size))){
-        return SMP_NULL;
-    }
-    if ((SMP_GLOBAL_PTR(final_chunk->next_chunk) - SMP_CAST_U8(final_chunk)) >= new_size){
-        final_chunk->size = new_size;
+    if (!new_size) return SMP_NULL;
+    smp_chunk_header_t * active_chunk = smp_findchunk(ptr);
+    if (!active_chunk) return SMP_NULL;
+    
+    if ((SMP_GLOBAL_PTR(active_chunk->next_chunk) - SMP_CAST_U8(active_chunk) - SMP_CHUNK_SIZE) >= new_size){
+        active_chunk->size = new_size;
         return ptr;
     }
     else{
@@ -254,7 +203,7 @@ void * smp_realloc(void * ptr, uint16_t new_size){
         if (new_ptr == SMP_NULL){
             return SMP_NULL;
         }
-        memcpy(new_ptr, SMP_CAST_U8(final_chunk) + SMP_CHUNK_SIZE, final_chunk->size);
+        memcpy(new_ptr, SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, active_chunk->size);
         smp_free(ptr);
         return new_ptr;
     }
