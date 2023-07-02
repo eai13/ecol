@@ -24,6 +24,11 @@ int main(){
     uint8_t * ptr_4 = smp_realloc(ptr_1, 11);
     memset(ptr_4 + 10, 0xDD, 1);
     print_map();
+
+    printf("ASSERT 1 %d\r\n", smp_assert_address(ptr_4));
+    printf("ASSERT 2 %d\r\n", smp_assert_address(ptr_4 - 10));
+    printf("ASSERT 3 %d\r\n", smp_assert_size(ptr_4, 11));
+    printf("ASSERT 4 %d\r\n", smp_assert_size(ptr_4, 12));
     
     return 0;
 }
