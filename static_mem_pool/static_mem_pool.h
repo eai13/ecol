@@ -32,12 +32,20 @@ typedef enum{
     SMP_FREE_IS_RESOURCE_PTR    = ((uint8_t)(0x03))     ///< Pointer points to the resource space (chunk header space)
 }smp_free_status_e;
 
+typedef enum{
+    SMP_ASSERT_FALSE = ((uint8_t)(0x00)),
+    SMP_ASSERT_TRUE = ((uint8_t)(0x01))
+}smp_assert_e;
+
 void *              smp_malloc(smp_size_t size);
 void *              smp_realloc(void * ptr, smp_size_t new_size);
 smp_free_status_e   smp_free(void * ptr);
 
 smp_size_t          smp_count_filled(void);
 smp_size_t          smp_count_free(void);
+
+smp_assert_e        smp_assert_size(void * ptr, smp_size_t size);
+smp_assert_e        smp_assert_address(void * ptr);
 
 // Utility functions, may delete
 /* Prints global pointer in local memory pool */

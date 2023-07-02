@@ -90,7 +90,7 @@ smp_chunk_header_t * smp_findchunk(void * ptr){
         {
             return active_chunk;
         }
-        active_chunk = SMP_CAST_CHUNK_H(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE + active_chunk->size);
+        active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
     }while(active_chunk != SMP_CAST_CHUNK_H(SMP_END_GLOBAL));
     return SMP_CAST_CHUNK_H(SMP_NULL);
 }
@@ -223,8 +223,36 @@ smp_size_t smp_count_free(void){
     return ((smp_size_t)STATIC_MEM_POOL_SIZE - smp_count_filled_bytes());
 }
 
+/***
+ * @brief Check if the ptr chunk has the needed amount of space
+ * @param[in] ptr Some address in the memory
+ * @param[in] size Required amount of space to be verified
+ * @return SMP_ASSERT_TRUE - if the ptr belongs to some chunk and size parameter is less or equal to the chunk->size, SMP_ASSERT_FALSE - otherwise 
+*/
+smp_assert_e smp_assert_size(void * ptr, smp_size_t size){
+    if ((size == (smp_size_t)0) || (ptr == SMP_NULL)) return SMP_ASSERT_FALSE;
+    smp_chunk_header_t * active_chunk = smp_findchunk(ptr);
+    if (active_chunk != SMP_NULL){
+        if (active_chunk->size >= size){
+            return SMP_ASSERT_TRUE;
+        }
+    }
+    return SMP_ASSERT_FALSE;
+}
 
-
+/***
+ * @brief Check if the ptr belongs to some chunk
+ * @param[in] ptr Some address in the memory
+ * @return SMP_ASSERT_TRUE - if the ptr belongs to some chunk, SMP_ASSERT_FALSE - otherwise
+*/
+smp_assert_e smp_assert_address(void * ptr){
+    if (ptr == SMP_NULL) return SMP_ASSERT_FALSE;
+    smp_chunk_header_t * active_chunk = smp_findchunk(ptr);
+    if (active_chunk != SMP_NULL){
+        return SMP_ASSERT_TRUE;
+    }
+    return SMP_ASSERT_FALSE;
+}
 
 
 // Utility functions, may delete
