@@ -6,7 +6,21 @@
 #include <string.h>
 
 /// @brief SMP size in bytes
-#define STATIC_MEM_POOL_SIZE    56
+#define STATIC_MEM_POOL_SIZE    (56u)
+
+#if (STATIC_MEM_POOL_SIZE <= 0x100u)
+typedef uint8_t smp_addr_t;
+typedef uint8_t smp_size_t;
+#elif (STATIC_MEM_POOL_SIZE <= 0x10000u)
+typedef uint16_t smp_addr_t;
+typedef uint16_t smp_size_t;
+#elif (STATIC_MEM_POOL_SIZE <= 0x100000000u)
+typedef uint32_t smp_addr_t;
+typedef uint32_t smp_size_t;
+#else
+typedef uint64_t smp_addr_t;
+typedef uint64_t smp_size_t;
+#endif
 
 void smp_initialize(void);
 
@@ -18,12 +32,12 @@ typedef enum{
     SMP_FREE_IS_RESOURCE_PTR    = ((uint8_t)(0x03))     ///< Pointer points to the resource space (chunk header space)
 }smp_free_status_e;
 
-void *              smp_malloc(uint16_t size);
-void *              smp_realloc(void * ptr, uint16_t new_size);
+void *              smp_malloc(smp_size_t size);
+void *              smp_realloc(void * ptr, smp_size_t new_size);
 smp_free_status_e   smp_free(void * ptr);
 
-uint16_t            smp_count_filled(void);
-uint16_t            smp_count_free(void);
+smp_size_t          smp_count_filled(void);
+smp_size_t          smp_count_free(void);
 
 // Utility functions, may delete
 /* Prints global pointer in local memory pool */
