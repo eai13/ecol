@@ -4,15 +4,15 @@
 #define SMP_NULL          ((void *)0)
 
 /// @brief Local address of the start of SMP
-#define SMP_BEGIN_LOCAL   (0)
+#define SMP_BEGIN_LOCAL   ((smp_addr_t)0u)
 /// @brief Global address of the start of SMP
 #define SMP_BEGIN_GLOBAL  (smp + SMP_BEGIN_LOCAL)
 /// @brief Local address of the end of SMP
-#define SMP_END_LOCAL     (STATIC_MEM_POOL_SIZE)
+#define SMP_END_LOCAL     ((smp_addr_t)STATIC_MEM_POOL_SIZE)
 /// @brief Global address of the end of SMP
 #define SMP_END_GLOBAL    (smp + SMP_END_LOCAL)
 /// @brief Chunk header size in bytes
-#define SMP_CHUNK_SIZE    (sizeof(smp_chunk_header_t))
+#define SMP_CHUNK_SIZE    ((smp_size_t)sizeof(smp_chunk_header_t))
 
 /// @brief Cast to uint8_t *
 #define SMP_CAST_U8(ptr) \
@@ -44,9 +44,9 @@ static uint8_t smp[STATIC_MEM_POOL_SIZE];
 #pragma pack(push, 1)
 /// @brief Chunk header typedef
 typedef struct{
-    uint16_t    size;       ///< Size of data, contained in the chunk
-    uint16_t    prev_chunk; ///< Local address of the previous chunk
-    uint16_t    next_chunk; ///< Local address of the next chunk
+    smp_size_t    size;       ///< Size of data, contained in the chunk
+    smp_addr_t    prev_chunk; ///< Local address of the previous chunk
+    smp_addr_t    next_chunk; ///< Local address of the next chunk
 }smp_chunk_header_t;
 #pragma pack(pop)
 
@@ -60,7 +60,7 @@ typedef struct{
 */
 static inline
 void * smp_chunk_add(smp_chunk_header_t * prev_chunk, smp_chunk_header_t * next_chunk,
-                     uint8_t * global_pos, uint16_t size){
+                     uint8_t * global_pos, smp_size_t size){
     smp_chunk_header_t * new_chunk = SMP_CAST_CHUNK_H(global_pos);
     if ((prev_chunk != SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)) || ((prev_chunk == SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)) && (prev_chunk->size != 0))){
         prev_chunk->next_chunk = SMP_LOCAL_PTR(new_chunk);
@@ -100,11 +100,11 @@ smp_chunk_header_t * smp_findchunk(void * ptr){
  * @return Returns a number of filled bytes in the memory pool
 */
 static inline
-uint16_t smp_count_filled_bytes(void){
-    uint16_t filled_bytes = 0;
+smp_size_t smp_count_filled_bytes(void){
+    smp_size_t filled_bytes = (smp_size_t)0;
     smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
     do{
-        if(active_chunk->size != 0){
+        if(active_chunk->size != (smp_size_t)0){
             filled_bytes += SMP_CHUNK_SIZE + active_chunk->size;
         }
         active_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
@@ -119,7 +119,7 @@ void smp_initialize(void){
     smp_chunk_header_t * initial_chunk = SMP_CAST_CHUNK_H(smp);
     initial_chunk->next_chunk = SMP_END_LOCAL;
     initial_chunk->prev_chunk = SMP_BEGIN_LOCAL;
-    initial_chunk->size = 0;
+    initial_chunk->size = (smp_size_t)0;
 }
 
 /***
@@ -127,12 +127,13 @@ void smp_initialize(void){
  * @param[in] size Amount of bytes to be allocated
  * @return Returns a void pointer to the start of the allocated memory
 */
-void * smp_malloc(uint16_t size){
-    if(size == 0) {
+void * smp_malloc(smp_size_t size){
+    if(size == (smp_size_t)0) {
         return SMP_NULL;
     }
     smp_chunk_header_t * active_chunk = SMP_CAST_CHUNK_H(smp);
-    if ((active_chunk->size == 0) && ((SMP_MIDCHUNK_SIZE(active_chunk, SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk)))) >= size)){
+    if ((active_chunk->size == (smp_size_t)0) &&
+        ((SMP_MIDCHUNK_SIZE(active_chunk, SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk)))) >= size)){
         return smp_chunk_add(SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->prev_chunk)), SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk)), smp, size);
     }
     smp_chunk_header_t * next_chunk;
@@ -158,25 +159,22 @@ void * smp_malloc(uint16_t size){
 */
 smp_free_status_e smp_free(void * ptr){
     smp_chunk_header_t * active_chunk = smp_findchunk(ptr);
-    if (!active_chunk) return SMP_FREE_NOT_IN_POOL;
-    smp_chunk_header_t * prev_chunk;
+    if (active_chunk == SMP_NULL) return SMP_FREE_NOT_IN_POOL;
 
     if (active_chunk == SMP_CAST_CHUNK_H(SMP_BEGIN_GLOBAL)){
-        memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
-        active_chunk->size = 0;
+        active_chunk->size = (smp_size_t)0;
         return SMP_FREE_OK;
     }
     else{
-        prev_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->prev_chunk));
-        memset(SMP_CAST_U8(active_chunk) + SMP_CHUNK_SIZE, 0x00, active_chunk->size);
+        smp_chunk_header_t * prev_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->prev_chunk));
         prev_chunk->next_chunk = active_chunk->next_chunk;
         if (active_chunk->next_chunk != SMP_END_LOCAL) {
             smp_chunk_header_t * next_chunk = SMP_CAST_CHUNK_H(SMP_GLOBAL_PTR(active_chunk->next_chunk));
             next_chunk->prev_chunk = active_chunk->prev_chunk;
         }
-        active_chunk->size = 0;
-        active_chunk->next_chunk = 0;
-        active_chunk->prev_chunk = 0;
+        active_chunk->size = (smp_size_t)0;
+        active_chunk->next_chunk = SMP_BEGIN_LOCAL;
+        active_chunk->prev_chunk = SMP_BEGIN_LOCAL;
         return SMP_FREE_OK;
     }
 }
@@ -189,8 +187,8 @@ smp_free_status_e smp_free(void * ptr){
  * @param[in] ptr Pointer to the piece of data in the chunk to be reallocated
  * @return Returns SMP_NULL if failed and void * if succeeded
 */
-void * smp_realloc(void * ptr, uint16_t new_size){
-    if (!new_size) return SMP_NULL;
+void * smp_realloc(void * ptr, smp_size_t new_size){
+    if (new_size == (smp_size_t)0) return SMP_NULL;
     smp_chunk_header_t * active_chunk = smp_findchunk(ptr);
     if (!active_chunk) return SMP_NULL;
     
@@ -213,7 +211,7 @@ void * smp_realloc(void * ptr, uint16_t new_size){
  * @brief Count filled bytes (including headers) in static memory pool
  * @return Returns a number of filled bytes in the memory pool
 */
-uint16_t smp_count_filled(void){
+smp_size_t smp_count_filled(void){
     return smp_count_filled_bytes();
 }
 
@@ -221,8 +219,8 @@ uint16_t smp_count_filled(void){
  * @brief Count free bytes (including headers) in static memory pool
  * @return Returns a number of free bytes in the memory pool
 */
-uint16_t smp_count_free(void){
-    return STATIC_MEM_POOL_SIZE - smp_count_filled_bytes();
+smp_size_t smp_count_free(void){
+    return ((smp_size_t)STATIC_MEM_POOL_SIZE - smp_count_filled_bytes());
 }
 
 
