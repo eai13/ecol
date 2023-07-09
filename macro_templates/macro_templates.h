@@ -1,0 +1,6 @@
+#ifndef _ECOL_MACRO_TEMPLATES_H_
+#define _ECOL_MACRO_TEMPLATES_H_
+
+
+
+#endif
