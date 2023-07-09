@@ -2,8 +2,7 @@ TARGET = test
 BUILD_DIR = build
 
 CPP_SOURCES = \
-main.c \
-../macro_templates.c
+main.c
 
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(CPP_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(CPP_SOURCES)))
