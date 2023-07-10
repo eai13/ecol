@@ -48,15 +48,15 @@ typedef struct{
 }mystruct_11;
 
 DECLARE_TEMPLATE_FUNCTION(
-Type1, myinc, (Type1 a){
-    a.a += 1;
-    return a;
+Type2, myinc, (Type1 a){
+    Type2 resStr;
+    resStr.a += a.a * 2;
+    return resStr;
 },
-Type1,
-mystruct_1,
-mystruct_2,
-mystruct_3,
-mystruct_4
+(Type1,      Type2),
+(mystruct_1, mystruct_4),
+(mystruct_2, mystruct_4),
+(mystruct_3, mystruct_4)
 )
 
 int main(){

@@ -11,8 +11,8 @@
 
 #define UNBRACE(...) __VA_ARGS__
 
-#define TAKE_FIRST(_1, ...) _1
-#define TAKE_EXCEPT_FIRST(_1, ...) (__VA_ARGS__)
+#define TAKE_FIRST(FIRST, ...) FIRST
+#define TAKE_EXCEPT_FIRST(_1, ...) ( __VA_ARGS__ )
 
 #define PREPROCESSOR_DEFINE #define
 #define PREPROCESSOR_UNDEF #undef
